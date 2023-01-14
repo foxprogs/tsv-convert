@@ -7,32 +7,35 @@ const vots = require('scripture-resources-rcl/dist/core/selections/verseObjects'
 console.log('Convert from tsv7 to tsv9');
 const tsvRaw = fs.readFileSync('./res/3JN.tsv', 'utf8');
 const usfmRaw = fs.readFileSync('./res/3JN.usfm', 'utf8');
+const greekRaw = fs.readFileSync('./res/greek.usfm', 'utf8');
 const tsv = tsvRaw.split('\n').map(el => el.split('\t'))
 const usfm = usfmJs.toJSON(usfmRaw);
+const greek = usfmJs.toJSON(greekRaw);
 const quote = tsv[3][4];
-const verseObjects = usfm.chapters['1']['2'].verseObjects;
+const verseObjects = greek.chapters['1']['1'].verseObjects;
 const occurence = tsv[3][5];
 //console.log({tsv,usfm});
-//console.log(tsv[3][4], tsv[3][5], usfm.chapters['1']['1'].verseObjects);
+// console.log(tsv[3][4], tsv[3][5], greek.chapters['1']['1'].verseObjects);
 // console.log(
 //     vots.verseObjectsToString(usfm.chapters['1']['1'].verseObjects)
 // );
-const newVerseObjects = verseObjects.map(el => (delete el.strong, delete el.lemma, delete el.morph, el?.children))
-console.log(JSON.stringify(newVerseObjects));
+// const newVerseObjects = verseObjects.map(el => (delete el.strong, delete el.lemma, delete el.morph, el?.children))
+// console.log(JSON.stringify(newVerseObjects));
 // console.log(JSON.stringify(verseObjects));
 // console.log('flattenVerseObjects', vots.flattenVerseObjects(verseObjects));
 // console.log('occurrenceInjectVerseObjects', vots.occurrenceInjectVerseObjects(verseObjects));
 // console.log('verseObjectsToString', vots.verseObjectsToString(verseObjects));
 // console.log(
-//   srr.tokenizer(vots.verseObjectsToString(usfm.chapters['1']['1'].verseObjects))
+//   srr.tokenizer(vots.verseObjectsToString(verseObjects))
 // );
 // console.log(csh.selectionsFromQuote({ quote, verseObjects, occurence }));
 // console.log(
 //   srr.tokenizer(srs.normalizeString(
-//     vots.verseObjectsToString(usfm.chapters['1']['1'].verseObjects)
+//     vots.verseObjectsToString(verseObjects)
 //   ))
 // );
-//console.log(srr.selectionsFromQuoteAndVerseObjects(tsv[3][4],usfm.chapters['1']['1'].verseObjects,tsv[3][5],));
+console.log(srs.selectionsFromQuoteAndVerseObjects({quote, verseObjects, occurence} )); // https://github.com/unfoldingWord/scripture-resources-rcl/blob/master/src/core/selections/selections.js#L27
+
 // сейчас мы получили данные из файлов и преобразовали в объекты
 // надо определить, какой файл будет основным
 // так как записывать новый контент мы будем в тсв, логично чтобы он был основным
