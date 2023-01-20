@@ -1,40 +1,118 @@
 const usfmJs = require('usfm-js');
 const fs = require('fs');
 const srs = require('scripture-resources-rcl/dist/core/selections/selections');
-const srr = require('scripture-resources-rcl/dist/core/selections/tokenizer');
 const csh = require('scripture-resources-rcl/dist/components/selections/helpers');
-const vots = require('scripture-resources-rcl/dist/core/selections/verseObjects');
+
+const parseVO = (verseObject, selections, originalWords = []) => {
+  switch (verseObject.type) {
+    case 'quote':
+      if (verseObject.children) {
+        return verseObject.children
+          .map((el) => parseVO(el, selections))
+          .filter((el) => el !== '')
+          .join(' ');
+      }
+
+      break;
+    case 'milestone':
+      switch (verseObject.tag) {
+        case 'k':
+          return verseObject.children
+            .map((el) => parseVO(el, selections))
+            .filter((el) => el !== '')
+            .join(' ');
+          break;
+        case 'zaln':
+          const originalWord = {
+            strong: verseObject.strong,
+            lemma: verseObject.lemma,
+            morph: verseObject.morph,
+            occurrence: verseObject.occurrence,
+            occurrences: verseObject.occurrences,
+            content: verseObject.content,
+          };
+          let _originalWords = originalWords || [];
+          _originalWords.push(originalWord);
+          if (
+            verseObject.children.length === 1 &&
+            verseObject.children[0].type === 'milestone'
+          ) {
+            return parseVO(verseObject.children[0], selections, _originalWords);
+          } else {
+            if (verseObject.strong) {
+              const selected = csh.areSelected({
+                words: [verseObject],
+                selections,
+              });
+              return verseObject.children
+                .map((_verseObject) =>
+                  selected ? _verseObject.text || _verseObject.content : ''
+                )
+                .filter((el) => el !== '')
+                .join(' ');
+            }
+            break;
+          }
+          break;
+      }
+      break;
+    case 'word':
+      if (verseObject.strong) {
+        const selected = csh.areSelected({
+          words: [verseObject],
+          selections,
+        });
+        return selected ? verseObject.text || verseObject.content : '';
+      }
+      break;
+  }
+  return '';
+};
+
 console.log('Convert from tsv7 to tsv9');
+
+/**
+ * для начала нам надо загрузить 3 файла
+ * 1 - tsv с заметками
+ * 2 - usfm с текстом на нужном языке
+ * 3 - usfm с греческим текстом
+ */
 const tsvRaw = fs.readFileSync('./res/3JN.tsv', 'utf8');
 const usfmRaw = fs.readFileSync('./res/3JN.usfm', 'utf8');
-const greekRaw = fs.readFileSync('./res/greek.usfm', 'utf8');
-const tsv = tsvRaw.split('\n').map(el => el.split('\t'))
+const greekRaw = fs.readFileSync('./res/3JNG.usfm', 'utf8');
+
+// Конвертируем в формат, удобный для работы
+const tsv = tsvRaw.split('\n').map((el) => el.split('\t'));
 const usfm = usfmJs.toJSON(usfmRaw);
 const greek = usfmJs.toJSON(greekRaw);
-const quote = tsv[3][4];
-const verseObjects = greek.chapters['1']['1'].verseObjects;
-const occurence = tsv[3][5];
-//console.log({tsv,usfm});
-// console.log(tsv[3][4], tsv[3][5], greek.chapters['1']['1'].verseObjects);
-// console.log(
-//     vots.verseObjectsToString(usfm.chapters['1']['1'].verseObjects)
-// );
-// const newVerseObjects = verseObjects.map(el => (delete el.strong, delete el.lemma, delete el.morph, el?.children))
-// console.log(JSON.stringify(newVerseObjects));
-// console.log(JSON.stringify(verseObjects));
-// console.log('flattenVerseObjects', vots.flattenVerseObjects(verseObjects));
-// console.log('occurrenceInjectVerseObjects', vots.occurrenceInjectVerseObjects(verseObjects));
-// console.log('verseObjectsToString', vots.verseObjectsToString(verseObjects));
-// console.log(
-//   srr.tokenizer(vots.verseObjectsToString(verseObjects))
-// );
-// console.log(csh.selectionsFromQuote({ quote, verseObjects, occurence }));
-// console.log(
-//   srr.tokenizer(srs.normalizeString(
-//     vots.verseObjectsToString(verseObjects)
-//   ))
-// );
-console.log(srs.selectionsFromQuoteAndVerseObjects({quote, verseObjects, occurence} )); // https://github.com/unfoldingWord/scripture-resources-rcl/blob/master/src/core/selections/selections.js#L27
+
+// теперь надо пройти в цикле по каждой заметке и получить для нее цитату на целевом языке
+
+let reference = '';
+let selections = '';
+let chapter = 0;
+let verse = 0;
+for (let i = 0; i < tsv.length; i++) {
+  const quote = tsv[i][4];
+  const occurence = tsv[i][5];
+  if (occurence === 0) continue;
+  if (reference !== tsv[i][0]) {
+    [chapter, verse] = tsv[i][0].split(':');
+    if (!verse || parseInt(verse).toString() !== verse) continue;
+    const verseObjects = greek.chapters?.[chapter]?.[verse]?.verseObjects;
+    selections = srs.selectionsFromQuoteAndVerseObjects({
+      quote,
+      verseObjects,
+      occurence,
+    });
+  }
+  if (!verse || parseInt(verse).toString() !== verse) continue;
+
+  const res = usfm.chapters[chapter][verse].verseObjects.map((el) =>
+    parseVO(el, selections)
+  );
+  console.log(quote, res.filter((el) => el !== '').join(' '));
+}
 
 // сейчас мы получили данные из файлов и преобразовали в объекты
 // надо определить, какой файл будет основным
