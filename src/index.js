@@ -3,6 +3,34 @@ const fs = require('fs');
 const srs = require('scripture-resources-rcl/dist/core/selections/selections');
 const csh = require('scripture-resources-rcl/dist/components/selections/helpers');
 
+const formatToString = (res) => {
+  let resultString = '';
+  /**
+   * надо пройти в цикле по тому что получилось
+   * 1. Пропускаем все, пока не попадется первое слово
+   * 2. Теперь к слову можно добавлять следующие не пустые строки
+   * 3. Если попадается пустая строка, то пропускаем до следующего слова
+   * 4. Если есть то ставим три точки и повторяем со 2 пункта
+   * 5. Если больше нет слов, то надо все символы убрать, по этому не стоит их прибавлять сразу, собирать лучше
+   * Либо такой вариант
+   * 1. Пропускем все, пока не попадется элемент, у которого первый символ - спецсимвол
+   * 2. Прибавляем к нему все, пока не попадется пустая строка.
+   * 3. С этого момента мы запоминаем и проверяем дальше слова.
+   * 4. Если больше ничего нет то удаляем все символы, пробелы и т.д., что мы могли добавить
+   * 5. Если попалось новое слово, то ставим три точки и добавляем снова все что идет
+   */
+  console.log(res)
+  // return res
+  //   .filter((el) => el !== '')
+  //   .join('')
+  //   .trim();
+  return res
+    .filter((el) => el !== '')
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 const parseVO = (verseObject, selections, originalWords = []) => {
   switch (verseObject.type) {
     case 'quote':
@@ -21,7 +49,6 @@ const parseVO = (verseObject, selections, originalWords = []) => {
             .map((el) => parseVO(el, selections))
             .filter((el) => el !== '')
             .join(' ');
-          break;
         case 'zaln':
           const originalWord = {
             strong: verseObject.strong,
@@ -53,9 +80,10 @@ const parseVO = (verseObject, selections, originalWords = []) => {
             }
             break;
           }
-          break;
       }
       break;
+    case 'text':
+      return verseObject.text
     case 'word':
       if (verseObject.strong) {
         const selected = csh.areSelected({
@@ -77,9 +105,9 @@ console.log('Convert from tsv7 to tsv9');
  * 2 - usfm с текстом на нужном языке
  * 3 - usfm с греческим текстом
  */
-const tsvRaw = fs.readFileSync('./res/3JN.tsv', 'utf8');
-const usfmRaw = fs.readFileSync('./res/3JN.usfm', 'utf8');
-const greekRaw = fs.readFileSync('./res/3JNG.usfm', 'utf8');
+const tsvRaw = fs.readFileSync('./res/TIT.tsv', 'utf8');
+const usfmRaw = fs.readFileSync('./res/TIT.usfm', 'utf8');
+const greekRaw = fs.readFileSync('./res/TITG.usfm', 'utf8');
 
 // Конвертируем в формат, удобный для работы
 const tsv = tsvRaw.split('\n').map((el) => el.split('\t'));
@@ -88,31 +116,31 @@ const greek = usfmJs.toJSON(greekRaw);
 
 // теперь надо пройти в цикле по каждой заметке и получить для нее цитату на целевом языке
 
-let reference = '';
 let selections = '';
 let chapter = 0;
 let verse = 0;
+let result = [];
 for (let i = 0; i < tsv.length; i++) {
-  const quote = tsv[i][4];
-  const occurence = tsv[i][5];
-  if (occurence === 0) continue;
-  if (reference !== tsv[i][0]) {
-    [chapter, verse] = tsv[i][0].split(':');
-    if (!verse || parseInt(verse).toString() !== verse) continue;
-    const verseObjects = greek.chapters?.[chapter]?.[verse]?.verseObjects;
-    selections = srs.selectionsFromQuoteAndVerseObjects({
-      quote,
-      verseObjects,
-      occurence,
-    });
-  }
+  const quote = tsv[i][5];
+  const occurence = tsv[i][6];
+  if (occurence === '0') continue;
+  chapter = tsv[i][1]
+  verse = tsv[i][2]
   if (!verse || parseInt(verse).toString() !== verse) continue;
+  const verseObjects = greek.chapters?.[chapter]?.[verse]?.verseObjects;
+  selections = srs.selectionsFromQuoteAndVerseObjects({
+    quote,
+    verseObjects,
+    occurence,
+  });
 
   const res = usfm.chapters[chapter][verse].verseObjects.map((el) =>
     parseVO(el, selections)
   );
-  console.log(quote, res.filter((el) => el !== '').join(' '));
+  result.push([quote, tsv[i][7], formatToString(res)].join('\t'));
 }
+fs.writeFileSync('./res/TITRS.tsv', result.join('\n') , 'utf8');
+
 
 // сейчас мы получили данные из файлов и преобразовали в объекты
 // надо определить, какой файл будет основным
