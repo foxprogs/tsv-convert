@@ -3,8 +3,6 @@ const fs = require('fs');
 const srs = require('scripture-resources-rcl/dist/core/selections/selections');
 const csh = require('scripture-resources-rcl/dist/components/selections/helpers');
 
-const bookId = 'PHM';
-
 const formatToString = (res) => {
   /**
    * надо пройти в цикле по тому что получилось
@@ -128,9 +126,9 @@ console.log('Convert from tsv7 to tsv9');
  * 2 - usfm с текстом на нужном языке
  * 3 - usfm с греческим текстом
  */
-const tsvRaw = fs.readFileSync('./res/' + bookId + '.tsv', 'utf8');
-const usfmRaw = fs.readFileSync('./res/' + bookId + '.usfm', 'utf8');
-const greekRaw = fs.readFileSync('./res/' + bookId + 'G.usfm', 'utf8');
+const tsvRaw = fs.readFileSync('./res/TIT.tsv', 'utf8');
+const usfmRaw = fs.readFileSync('./res/TIT.usfm', 'utf8');
+const greekRaw = fs.readFileSync('./res/TITG.usfm', 'utf8');
 
 // Конвертируем в формат, удобный для работы
 const tsv = tsvRaw.split('\n').map((el) => el.split('\t'));
@@ -143,42 +141,13 @@ let selections = '';
 let chapter = 0;
 let verse = 0;
 let result = [];
-for (let i = 1; i < tsv.length; i++) {
-  const quote = tsv[i][4];
-  const occurence = tsv[i][5];
-  if (occurence === '0') {
-      result.push(
-        [
-          bookId,
-          tsv[i][0].split(':')?.[0] ?? '',
-          tsv[i][0].split(':')?.[1] ?? '',
-          tsv[i][1],
-          tsv[i][3],
-          quote,
-          occurence,
-          '',
-          tsv[i][6],
-        ].join('\t')
-      );
-      continue;
-  };
-  [chapter, verse] = tsv[i][0].split(':')
-  if (!verse || parseInt(verse).toString() !== verse) {
-      result.push(
-        [
-          bookId,
-          chapter,
-          verse,
-          tsv[i][1],
-          tsv[i][3],
-          quote,
-          occurence,
-          '',
-          tsv[i][6],
-        ].join('\t')
-      );
-      continue;
-  };
+for (let i = 0; i < tsv.length; i++) {
+  const quote = tsv[i][5];
+  const occurence = tsv[i][6];
+  if (occurence === '0') continue;
+  chapter = tsv[i][1]
+  verse = tsv[i][2]
+  if (!verse || parseInt(verse).toString() !== verse) continue;
   const verseObjects = greek.chapters?.[chapter]?.[verse]?.verseObjects;
   selections = srs.selectionsFromQuoteAndVerseObjects({
     quote,
@@ -189,28 +158,9 @@ for (let i = 1; i < tsv.length; i++) {
   const res = usfm.chapters[chapter][verse].verseObjects.map((el) =>
     parseVO(el, selections)
   );
-//Book	Chapter	Verse	ID	SupportReference	OrigQuote	Occurrence	GLQuote	OccurrenceNote
-// Reference	ID	Tags	SupportReference	Quote	Occurrence	Note
-  result.push(
-    [
-      bookId,
-      chapter,
-      verse,
-      tsv[i][1],
-      tsv[i][3],
-      quote,
-      occurence,
-      formatToString(res),
-      tsv[i][6],
-    ].join('\t')
-  );
+  result.push([quote, tsv[i][7], formatToString(res)].join('\t'));
 }
-fs.writeFileSync(
-  './res/' + bookId + 'RS.tsv',
-  `Book\tChapter\tVerse\tID\tSupportReference\tOrigQuote\tOccurrence\tGLQuote\tOccurrenceNote\n` +
-    result.join('\n'),
-  'utf8'
-);
+fs.writeFileSync('./res/TITRS.tsv', result.join('\n') , 'utf8');
 
 
 // сейчас мы получили данные из файлов и преобразовали в объекты
