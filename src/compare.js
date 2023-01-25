@@ -1,124 +1,9 @@
 const usfmJs = require('usfm-js');
 const fs = require('fs');
 const srs = require('scripture-resources-rcl/dist/core/selections/selections');
-const csh = require('scripture-resources-rcl/dist/components/selections/helpers');
+const helper = require('./helper.js');
 
-const formatToString = (res) => {
-  /**
-   * надо пройти в цикле по тому что получилось
-   * 1. Пропускаем все, пока не попадется первое слово
-   * 2. Теперь к слову можно добавлять следующие не пустые строки
-   * 3. Если попадается пустая строка, то пропускаем до следующего слова
-   * 4. Если есть то ставим три точки и повторяем со 2 пункта
-   * 5. Если больше нет слов, то надо все символы убрать, по этому не стоит их прибавлять сразу, собирать лучше
-   * Либо такой вариант
-   * 1. Пропускем все, пока не попадется элемент, у которого первый символ - спецсимвол
-   * 2. Прибавляем к нему все, пока не попадется пустая строка.
-   * 3. С этого момента мы запоминаем и проверяем дальше слова.
-   * 4. Если больше ничего нет то удаляем все символы, пробелы и т.д., что мы могли добавить
-   * 5. Если попалось новое слово, то ставим три точки и добавляем снова все что идет
-   */
-  let resultString = ''; // это итоговая строка с текстом
-  let addon = ''; // тут мы будем собирать все что после слова остается
-  // проходим в цикле по каждому слову
-  let dotted = false;
-  for (const word of res) {
-    if (!resultString.length) {
-      // если еще нет никаких слов
-      if (word[0] === '~') {
-        // если это наше слово то добавим его
-        resultString = word.slice(1)
-      } // если нет то идем дальше
-    } else {
-      if (word === '') {
-        // если это пустое значение, значит при появлении нового слова надо будет поставить три точки
-        dotted = true;
-        continue;
-      }
-      if (word[0] === '~') { // если это наше слово то
-        if (dotted) { // если между словами были какие-то другие слова - поставим три точки
-          dotted = false
-          addon = ''
-          resultString += '... ' + word.slice(1);
-        } else { // если небыло между словами других слов
-          resultString += addon + word.slice(1);
-          addon = ''
-        }
-        continue;
-      }
-      if (/\w/gi.test(word)) {
-        // если это какие-то непривязанные слова то будем ставить три точки
-        dotted = true;
-      } else {
-        // значит тут пробелы, запятые и другие символы
-        addon += word;
-      }
-    }
-  }
-  return resultString;
-}
-
-const parseVO = (verseObject, selections, originalWords = []) => {
-  switch (verseObject.type) {
-    case 'quote':
-      if (verseObject.children) {
-        return verseObject.children
-          .map((el) => parseVO(el, selections));
-      }
-
-      break;
-    case 'milestone':
-      switch (verseObject.tag) {
-        case 'k':
-          return verseObject.children
-            .map((el) => parseVO(el, selections));
-        case 'zaln':
-          const originalWord = {
-            strong: verseObject.strong,
-            lemma: verseObject.lemma,
-            morph: verseObject.morph,
-            occurrence: verseObject.occurrence,
-            occurrences: verseObject.occurrences,
-            content: verseObject.content,
-          };
-          let _originalWords = originalWords || [];
-          _originalWords.push(originalWord);
-          if (
-            verseObject.children.length === 1 &&
-            verseObject.children[0].type === 'milestone'
-          ) {
-            return parseVO(verseObject.children[0], selections, _originalWords);
-          } else {
-            if (verseObject.strong) {
-              const selected = csh.areSelected({
-                words: [verseObject],
-                selections,
-              });
-              return selected ? '~'+verseObject.children
-                .map((_verseObject) =>
-                  (_verseObject.text || _verseObject.content)
-                ).join('') : '';
-            }
-            break;
-          }
-      }
-      break;
-    case 'text':
-      return verseObject.text
-    case 'word':
-      if (verseObject.strong) {
-        const selected = csh.areSelected({
-          words: [verseObject],
-          selections,
-        });
-        return selected ? '~'+(verseObject.text || verseObject.content) : '';
-      }
-      break;
-  }
-  return '';
-};
-
-console.log('Convert from tsv7 to tsv9');
+console.log('Compare GLQuote from tsv9 and from module');
 
 /**
  * для начала нам надо загрузить 3 файла
@@ -156,9 +41,9 @@ for (let i = 0; i < tsv.length; i++) {
   });
 
   const res = usfm.chapters[chapter][verse].verseObjects.map((el) =>
-    parseVO(el, selections)
+    helper.parseVerseObject(el, selections)
   );
-  result.push([quote, tsv[i][7], formatToString(res)].join('\t'));
+  result.push([quote, tsv[i][7], helper.formatToString(res)].join('\t'));
 }
 fs.writeFileSync('./res/TITRS.tsv', result.join('\n') , 'utf8');
 
