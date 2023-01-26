@@ -1,9 +1,13 @@
 const usfmJs = require('usfm-js');
 const fs = require('fs');
 const srs = require('scripture-resources-rcl/dist/core/selections/selections');
+const srvo = require('scripture-resources-rcl/dist/core/selections/verseObjects');
 const helper = require('./helper.js');
 
 const bookId = 'PHM';
+
+const greekQuote = 'καὶ';//'ἡμῶν, καὶ Ἀπφίᾳ';
+const rangeOccurrence = -1;
 
 console.log('Use range');
 
@@ -22,16 +26,13 @@ const tsv = tsvRaw.split('\n').map((el) => el.split('\t'));
 const usfm = usfmJs.toJSON(usfmRaw);
 const greek = usfmJs.toJSON(greekRaw);
 
-console.log(
-  helper.greekTest
-    .map((el, i) => i + 1 + ' ' + el.map((elx) => elx.text).join(''))
-    .join('')
+helper.greekTest.map((el, i) =>
+  console.log(i + 1, el.map((elx) => elx.text).join('').trim())
 );
-
+console.log()
 /**
  * Нам надо объединить несколько стихов
- * Для начала надо понять по поводу вложенности, как она работает и на каком уровне присутствуют occurrence и occurrences
- * Наша задача сведется к тому, что мы должны будем просто пересчитать эти значения
+ * Наша задача сведется к тому, что мы должны будем просто пересчитать occurrence и occurrences
  * Первым проходом мы должны получить каждое слово, и сколько раз оно встречается в тексте
  * второй проход - мы переписываем occurrences и так же occurrence. Надо сделать так
  * Нужно запоминать какой стих и сколько тут было этих слов
@@ -41,24 +42,28 @@ console.log(
  * καὶ occurrences=3 occurrence=1
  * καὶ occurrences=3 occurrence=2
  * καὶ occurrences=3 occurrence=3
+ * для всех стихов мы переписываем значение occurrences
  * для первого стиха мы occurrence оставляем без изменений
  * для каждого следующего мы к occurrence прибавляем occurrences с прошлых стихов
  */
 
 selections = srs.selectionsFromQuoteAndVerseObjects({
-  quote: 'ἡμῶν, καὶ Ἀπφίᾳ',
-  verseObjects: [...helper.greekTest[0],...helper.greekTest[1],...helper.greekTest[2],],
-  occurrence: 1,
+  quote: greekQuote,
+  verseObjects: [
+    ...helper.greekTest[0],
+    ...helper.greekTest[1],
+    ...helper.greekTest[2],
+  ],
+  occurrence: rangeOccurrence,
 });
-// console.log(selections);
 
-// console.log(
-//   srvo.occurrenceInjectVerseObjects([
-//     ...helper.targetTest[0],
-//     ...helper.targetTest[1],
-//     ...helper.targetTest[2],
-//   ])
-// );
+helper.targetTest.map((el, index) =>
+  console.log(
+    index + 1,
+    srs.normalizeString(srvo.verseObjectsToString(helper.targetTest[index]))
+  )
+);
+console.log()
 
 const flattenVerseObjects = (verseObjects, flat = []) => {
   let _verseObjects = [...verseObjects];
@@ -123,15 +128,15 @@ const correctOccurrences = (verseObjects, index) => {
         current.verseIndex = index;
         current.increment = 0;
         current.preview = parseInt(verseObject.occurrences);
-      } else if ((current.verseIndex !== index)) {
+      } else if (current.verseIndex !== index) {
         current.verseIndex = index;
         current.increment += current.preview;
         current.preview = parseInt(verseObject.occurrences);
       }
-      verseObject.occurrences =
-        current.occurrences.toString();
-      verseObject.occurrence = (parseInt(verseObject.occurrence) +
-        current.increment).toString();
+      verseObject.occurrences = current.occurrences.toString();
+      verseObject.occurrence = (
+        parseInt(verseObject.occurrence) + current.increment
+      ).toString();
     }
     if (verseObject?.children) {
       verseObject.children = correctOccurrences(verseObject.children, index);
@@ -147,8 +152,8 @@ const newVal = helper.targetTest.map((verse, index) => {
 });
 
 console.log(
-  'ἡμῶν, καὶ Ἀπφίᾳ',
-  1,
+  greekQuote,
+  rangeOccurrence,
   helper.formatToString(
     [...newVal[0], ...newVal[1], ...newVal[2]].map((el) =>
       helper.parseVerseObject(el, selections)
