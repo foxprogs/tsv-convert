@@ -245,7 +245,7 @@ const greekTest = [
     { type: 'text', text: ',\n\n' },
   ],
   [
-    ({
+    {
       text: 'καὶ',
       tag: 'w',
       type: 'word',
@@ -379,10 +379,10 @@ const greekTest = [
       strong: 'G15770',
       morph: 'Gr,N,,,,,DFS,',
     },
-    { type: 'text', text: ':\n\n' }),
+    { type: 'text', text: ':\n\n' },
   ],
   [
-    ({
+    {
       text: 'χάρις',
       tag: 'w',
       type: 'word',
@@ -499,7 +499,7 @@ const greekTest = [
       morph: 'Gr,N,,,,,GMS,',
     },
     { type: 'text', text: '.\n\n' },
-    { tag: 'p', nextChar: '\n', type: 'paragraph' }),
+    { tag: 'p', nextChar: '\n', type: 'paragraph' },
   ],
 ];
 
@@ -785,7 +785,7 @@ const targetTest = [
     { type: 'text', text: ', \n' },
   ],
   [
-    ({
+    {
       tag: 'zaln',
       type: 'milestone',
       strong: 'G25320',
@@ -1075,10 +1075,10 @@ const targetTest = [
       ],
       endTag: 'zaln-e\\*',
     },
-    { type: 'text', text: ': \n' }),
+    { type: 'text', text: ': \n' },
   ],
   [
-    ({
+    {
       tag: 'zaln',
       type: 'milestone',
       strong: 'G54850',
@@ -1350,7 +1350,7 @@ const targetTest = [
       ],
       endTag: 'zaln-e\\*',
     },
-    { type: 'text', text: '. \n' }),
+    { type: 'text', text: '. \n' },
   ],
 ];
 
