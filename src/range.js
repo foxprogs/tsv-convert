@@ -6,7 +6,7 @@ const helper = require('./helper.js');
 
 const bookId = 'PHM';
 
-const greekQuote = 'καὶ';//'ἡμῶν, καὶ Ἀπφίᾳ';
+const greekQuote = 'καὶ'; //'ἡμῶν, καὶ Ἀπφίᾳ';
 const rangeOccurrence = -1;
 
 console.log('Use range');
@@ -27,9 +27,15 @@ const usfm = usfmJs.toJSON(usfmRaw);
 const greek = usfmJs.toJSON(greekRaw);
 
 helper.greekTest.map((el, i) =>
-  console.log(i + 1, el.map((elx) => elx.text).join('').trim())
+  console.log(
+    i + 1,
+    el
+      .map((elx) => elx.text)
+      .join('')
+      .trim()
+  )
 );
-console.log()
+console.log();
 /**
  * Нам надо объединить несколько стихов
  * Наша задача сведется к тому, что мы должны будем просто пересчитать occurrence и occurrences
@@ -63,7 +69,7 @@ helper.targetTest.map((el, index) =>
     srs.normalizeString(srvo.verseObjectsToString(helper.targetTest[index]))
   )
 );
-console.log()
+console.log();
 
 const flattenVerseObjects = (verseObjects, flat = []) => {
   let _verseObjects = [...verseObjects];
